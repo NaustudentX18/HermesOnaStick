@@ -4,7 +4,9 @@
 M5Stack M5Stick S3 and talks to your own Hermes Agent, built as a board port of the
 [Hermes Gadget SDK](https://github.com/Adolanium/hermes-gadget-sdk).
 
-**Status:** greenfield. M0 (this scaffold) is done; M1–M5 are planned below.
+**Status:** M0–M3 complete (scaffold, simulator, board port, launcher variant);
+M4 (physical validation) and M5 (final polish) remain. The firmware compiles and
+the core unit tests pass; the port is **experimental** until verified on hardware.
 
 ---
 
@@ -77,53 +79,45 @@ the **ST7789P3 offsets**.
 - [x] Repo created (`NaustudentX18/HermesOnaStick`), public, MIT.
 - [x] README, LICENSE, .gitignore, .gitmodules, CI skeleton, this plan.
 
-### M1 — Submodule + simulator profile
-- Add the SDK as a submodule at `firmware/hermes-gadget-sdk`, pinned to the v0.2.0 tag.
-- Add a `m5stick-s3` profile to the simulator (`python/hermes_gadget/sim/runner.py`)
-  with a 135×240 ST7789 SPI display, two buttons, no touch, ES8311 audio. This lets all
-  UI work happen on the laptop before the board exists.
-- **Done when:** `hermes-gadget sim --board m5stick-s3` renders the round/rect UI at
-  135×240 and pushes button events.
+### M1 — Submodule + simulator profile ✅ done
+- [x] SDK added as a submodule at `firmware/hermes-gadget-sdk`, pinned to the fork's
+  `port/m5stick-s3` branch (commit carries the port).
+- [x] `sim-m5stick-s3` profile added to the simulator (240×135 landscape, two buttons,
+  no touch). Verified: board registers and boots in a headless smoke test.
+- **Done when:** `hermes-gadget sim --board sim-m5stick-s3` renders at 240×135 and
+  pushes button events. ✅ verified.
 
-### M2 — Board port (the core engineering)
-Following `docs/porting.md`, add to the SDK tree:
-1. `Kconfig.projbuild`: `HG_BOARD_M5STICK_S3` choice.
-2. `board.cpp` / `board.hpp`: `BoardConfig` for the Stick (SPI ST7789P3, ES8311 codec
-   or I2S mic, buttons G11/G12, M5PM1 power, status LED G38 if exposed).
-3. `firmware/esp32/boards/m5stick-s3/sdkconfig.defaults`: target `esp32s3`, 8 MB flash,
+### M2 — Board port (the core engineering) ✅ done
+Following `docs/porting.md`, added to the SDK tree:
+1. [x] `Kconfig.projbuild`: `HG_BOARD_M5STICK_S3` choice.
+2. [x] `board.cpp` / `board.hpp`: `BoardConfig` for the Stick (SPI ST7789P3, ES8311
+   bidirectional codec, buttons G11/G12, M5PM1 power).
+3. [x] `firmware/esp32/boards/m5stick-s3/sdkconfig.defaults`: target `esp32s3`, 8 MB flash,
    **octal PSRAM** (`CONFIG_SPIRAM_MODE_OCT=y`), `CONFIG_HG_BOARD_M5STICK_S3=y`.
-4. `boards/m5stick-s3/board.json`: installer title/summary, `ready_made: true`.
-5. New **M5PM1 driver** (`firmware/drivers/m5pm1.cpp/hpp`) implementing `Power`
-   (battery voltage/percent via the ADC, charging state, `power_off`). Follow the
-   AXP2101 driver as a template; pin the M5Stack source revision for the init sequence
-   and record it for licensing.
-6. ST7789P3 offset handling (x=52, y=40) so the 135×240 image is centered correctly.
-7. Wire buttons to Talk/Cancel; set `talk_label` / `cancel_label`.
-8. Simulator profile mirrors the real peripherals (already done in M1).
+4. [x] `boards/m5stick-s3/board.json`: installer title/summary, `ready_made: true`.
+5. [x] New **M5PM1 driver** (`firmware/drivers/m5pm1.cpp/hpp`) implementing `Power`
+   (VBAT via I2C 0x22/0x23, power source 0x04, keyed SYS_CMD shutdown), plus unit tests.
+6. [x] ST7789P3 offset handling (x=52, y=40); mirror/invert set for landscape.
+7. [x] Buttons wired to Talk/Cancel (`KEY1`/`KEY2` labels).
+8. [x] `es8311_bidir` codec path: single ES8311 does mic ADC + speaker DAC.
 
 **Done when:** `idf.py build` succeeds for `m5stick-s3`, the simulator matches, and the
-board boots to the mascot "ready" screen on hardware.
+board boots to the mascot "ready" screen on hardware. ✅ `idf.py build` succeeds
+(`hermes_gadget.bin` 0x12d460, 39% slot free); the simulator matches; hardware boot
+awaits M4.
 
-### M3 — Launcher-compatible release
-The SDK's default `partitions.csv` is a two-slot OTA scheme with bootloader rollback.
-M5Launcher installs a *single* app `.bin` into its own OTA slot from SD. These two
-schemes collide, so we ship a **launcher variant**:
+### M3 — Launcher-compatible release ✅ done
+- [x] `launcher/partitions.csv`: single `factory` app slot at 0x10000 (8 MB flash).
+- [x] `launcher/build.sh` produces `HermesOnaStick-m5stick-s3-<version>.bin` (merged)
+  and `-app.bin` (standalone), plus `SHA256SUMS`. ✅ built (0.2.0).
+- [x] `docs/LAUNCHER.md` documents the load-via-M5Launcher steps and the SD pins.
 
-- A `launcher/partitions.csv` with a single `factory`/`ota_0` app slot sized to the
-  Stick's 8 MB flash, matching what M5Launcher expects.
-- A merged single `.bin` (bootloader + partition table + app) built for that table,
-  named `HermesOnaStick-m5stick-s3-<version>.bin`.
-- A `launcher/build.sh` (or PlatformIO env) that produces this artifact reproducibly.
-- A `launcher/README.md` documenting the exact "load via M5Launcher" steps.
+> ⚠️ Still open (M4): M5Launcher's supported-device list and app-offset assumptions
+> must be verified against the S3. Until then the documented USB/OTA fallback is the
+> confirmed path. See [LAUNCHER.md](LAUNCHER.md).
 
-> ⚠️ Known risk: M5Launcher's supported-device list and app-offset assumptions must be
-> verified against the M5Stick S3 before this is marked done. If M5Launcher does not
-> cleanly host the S3, the fallback is the SDK's standard USB flash + OTA path (which
-> always works). See [LAUNCHER.md](LAUNCHER.md).
-
-**Done when:** a `.bin` release loads from M5Launcher and boots to the pairing screen
-(and, failing that, the documented USB/OTA path is verified and the launcher limitation
-is stated honestly).
+**Done when:** a `.bin` release loads from M5Launcher and boots to the pairing screen.
+✅ build done; physical M5Launcher load pending M4.
 
 ### M4 — Physical hardware validation
 Per the SDK's `docs/hardware-validation.md`:

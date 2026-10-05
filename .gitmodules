@@ -1,3 +1,4 @@
 [submodule "firmware/hermes-gadget-sdk"]
 	path = firmware/hermes-gadget-sdk
-	url = https://github.com/Adolanium/hermes-gadget-sdk.git
+	url = https://github.com/NaustudentX18/hermes-gadget-sdk.git
+	branch = port/m5stick-s3

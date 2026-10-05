@@ -1,0 +1,15 @@
+# Launcher-compatible partition table for the M5Stick S3 (8 MB flash).
+#
+# The stock Hermes Gadget table (partitions.csv) uses two 1.9 MB OTA slots with
+# bootloader rollback. M5Launcher, by contrast, installs a SINGLE app image into
+# one app slot from SD and does its own switching. This table gives the launcher
+# variant a single "factory" app slot at the conventional 0x10000 offset, which
+# is what M5Launcher's SD updater expects to crop and install.
+#
+# Do NOT flash the dual-OTA firmware with this table, or the launcher variant
+# with the stock table: the partition maps would not line up.
+#
+# Name,   Type,    SubType,  Offset,   Size
+nvs,      data,    nvs,      0x9000,   0x5000
+phy_init, data,    phy,      0xf000,   0x1000
+factory,  app,     factory,  0x10000,  0x3f0000

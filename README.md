@@ -102,11 +102,14 @@ HermesOnaStick/
 | Milestone | State |
 |---|---|
 | M0 — Repo scaffold, plan, CI skeleton | ✅ this repo |
-| M1 — SDK submodule + simulator profile | ⬜ |
-| M2 — M5Stick S3 board port (display/buttons/PMIC/audio) | ⬜ |
-| M3 — Launcher-compatible `.bin` release | ⬜ |
-| M4 — Physical hardware validation | ⬜ |
+| M1 — SDK submodule + simulator profile | ✅ |
+| M2 — M5Stick S3 board port (display/buttons/PMIC/audio) | ✅ builds; unverified on HW |
+| M3 — Launcher-compatible `.bin` release | ✅ builds; unverified on HW |
+| M4 — Physical hardware validation | ⬜ pending board |
 | M5 — Polish: face, actions, OTA, docs | ⬜ |
+
+The firmware compiles and the core unit tests pass (62 cases, 0 failed); the port is
+**experimental** until M4 records a physical verification report.
 
 Tracked in full in [docs/PLAN.md](docs/PLAN.md).
 

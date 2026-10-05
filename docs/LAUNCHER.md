@@ -1,52 +1,66 @@
 # M5Launcher — Loading HermesOnaStick
 
 M5Launcher ([bmorcelli/Launcher](https://github.com/bmorcelli/Launcher)) boots a
-launcher firmware and installs app `.bin` files from an SD card into an OTA partition.
-This page documents how HermesOnaStick fits — and where it doesn't yet.
+launcher firmware and installs app `.bin` files from an SD card into an OTA
+partition. HermesOnaStick ships a **launcher-compatible variant** for this.
 
-## The collision
+## The collision (and how we resolve it)
 
-The Hermes Gadget SDK ships a **dual-slot OTA** partition table with bootloader
-rollback (two ~1.9 MB `ota_0`/`ota_1` slots). M5Launcher, by contrast, installs a
-**single** app image into its own fixed app slot and handles switching in its own
-bootloader. Flash a stock SDK `.bin` straight into M5Launcher and the partition maps
-will not line up — the app won't start.
+The Hermes Gadget SDK's stock firmware uses a **dual-slot OTA** partition table
+(two ~1.9 MB `ota_0`/`ota_1` slots with bootloader rollback). M5Launcher installs
+a **single** app image into one app slot and does its own switching. Flash a
+stock dual-OTA `.bin` into M5Launcher and the partition maps won't line up.
 
-## The plan: a launcher-compatible variant
+HermesOnaStick therefore builds a second variant against
+[`launcher/partitions.csv`](../launcher/partitions.csv), which replaces the two
+OTA slots with a single `factory` app slot at the conventional `0x10000` offset.
 
-HermesOnaStick ships a second build variant alongside the stock OTA firmware:
+## Building the launcher variant
 
-1. `launcher/partitions.csv` — a single `factory`/`ota_0` app slot sized for the
-   8 MB flash, no dual-OTA.
-2. A merged `HermesOnaStick-m5stick-s3-<version>.bin` (bootloader + partition table +
-   app) built against that table.
-3. `launcher/build.sh` produces the artifact reproducibly (idf.py or PlatformIO).
-4. Load it via M5Launcher per the launcher's own workflow (place `.bin` on SD, select
-   it, install).
+```bash
+# needs ESP-IDF 5.3+ and the submodule checked out (see docs/PLAN.md §4)
+env -u VIRTUAL_ENV bash launcher/build.sh
+```
 
-## Open questions (blocking M3)
+Outputs in `launcher/dist/`:
 
-- **Does M5Launcher support the M5Stick S3?** The launcher's supported-device list and
-  app-offset assumptions must be confirmed against the S3. The S3 is new enough that the
-  launcher may need a config entry.
-- **App offset** — the launcher lets a firmware sit at a non-default app address; the
-  exact offset for the S3 must be captured and encoded in the variant.
+| File | What it is |
+|---|---|
+| `HermesOnaStick-m5stick-s3-<version>.bin` | merged bootloader + partition table + app (flash at 0x0) |
+| `HermesOnaStick-m5stick-s3-<version>-app.bin` | the app image alone (the SD file M5Launcher installs) |
+| `SHA256SUMS` | checksums |
+
+## Loading via M5Launcher
+
+1. Flash M5Launcher to the M5Stick S3 (per the launcher's own instructions for
+   the Stick S3 — confirm the launcher lists the S3; see *Open questions*).
+2. Copy `HermesOnaStick-m5stick-s3-<version>-app.bin` onto the SD card
+   (your SD module is on Hat2-Bus: CS=G5, MOSI=G4, SCK=G6, MISO=G7).
+3. Insert the SD, boot into M5Launcher, select the `.bin`, and install.
+
+## Open questions
+
+- **Does M5Launcher list the M5Stick S3?** The launcher's supported-device list
+  and app-offset assumptions must be confirmed against the S3. If the launcher
+  lacks an S3 entry, its config may need one.
+- **App offset** — this variant places the app at `0x10000` (the `factory`
+  slot), matching the launcher's conventional app address. Confirm the exact
+  offset the launcher expects for the S3.
 
 ## Fallback (always works)
 
-Even if M5Launcher support is incomplete, the **standard path always works** and is the
-primary documented route:
+The standard path always works and is the primary documented route:
 
 ```bash
-idf.py -p /dev/cu.usbmodem* flash monitor     # USB flash
+idf.py -p /dev/cu.usbmodem* flash monitor     # USB flash (full image at 0x0)
 hermes gadget update                           # subsequent OTA updates
 ```
 
-M5Launcher is a convenience for hot-swapping between many apps; for a single
-dedicated device, USB + OTA is the cleaner, more reliable path.
+M5Launcher is a convenience for hot-swapping apps; for a single dedicated
+device, USB + OTA is cleaner and more reliable.
 
 ## Status
 
-M3 (launcher variant) is **not yet implemented**. Until it is, do not assume a stock
-`.bin` will load from M5Launcher — use USB flash. This file will be updated with exact
-steps once the variant builds and is verified on hardware.
+- **M3 done:** the launcher variant builds (`launcher/build.sh` produces both
+  images). **Not yet verified on hardware** — the S3's M5Launcher support and the
+  exact app offset still need physical confirmation (M4).

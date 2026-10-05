@@ -6,20 +6,46 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  # Placeholder until M1 lands the SDK submodule and the board port exists (M2).
-  # Real gates: ESP-IDF build of m5stick-s3, size check (tools/check_size.py),
-  # simulator smoke test, and a launcher-variant build in M3.
-  plan-check:
+  plan-and-docs:
+    name: Scaffold & docs sanity
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify scaffold files present
+        with:
+          submodules: recursive
+      - name: Verify required files present
         run: |
-          test -f README.md
-          test -f LICENSE
-          test -f docs/PLAN.md
-          test -f docs/HARDWARE.md
-          test -f docs/LAUNCHER.md
-          test -f .gitmodules
-          echo "Scaffold OK (M0). Board port CI lands in M2."
+          test -f README.md && test -f LICENSE && test -f .gitmodules
+          test -f docs/PLAN.md && test -f docs/HARDWARE.md && test -f docs/LAUNCHER.md
+          test -f docs/HARDWARE_VALIDATION.md
+          test -f firmware/hermes-gadget-sdk/firmware/esp32/boards/m5stick-s3/board.json
+          test -f firmware/hermes-gadget-sdk/firmware/esp32/boards/m5stick-s3/sdkconfig.defaults
+          echo "Scaffold OK"
+
+  # Builds the portable core + runs the SDK's core unit tests (host), the same
+  # gate the upstream SDK runs. The ESP32 firmware build needs the ESP-IDF
+  # toolchain and is exercised on the port branch's own CI / locally.
+  core-tests:
+    name: Firmware core (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04]
+    defaults:
+      run:
+        working-directory: firmware/hermes-gadget-sdk
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Configure
+        run: cmake -S firmware -B build/host -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/host --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build/host -C Release --output-on-failure
