@@ -88,13 +88,11 @@ guide for the full host setup.
 
 ```
 HermesOnaStick/
-├── firmware/            # ESP-IDF project: SDK submodule + M5Stick S3 port
-│   └── boards/m5stick-s3/   # board.json, sdkconfig.defaults
-├── port/                # reference port files ready to drop into the SDK
-├── launcher/            # M5Launcher-compatible build variant + release tooling
-├── docs/                # plan, hardware reference, launcher notes
-├── .github/workflows/   # CI (build matrix + size checks)
-└── tests/               # simulator + unit tests
+├── firmware/            # SDK submodule (the M5Stick S3 port lives on its port/m5stick-s3 branch)
+├── launcher/            # M5Launcher-compatible partition table + build script
+├── docs/                # plan, hardware reference, validation checklist, launcher notes
+├── .github/workflows/   # CI (scaffold sanity + host core unit tests)
+└── CHANGELOG / CONTRIBUTING / SECURITY / THIRD_PARTY_NOTICES
 ```
 
 ## Project status
