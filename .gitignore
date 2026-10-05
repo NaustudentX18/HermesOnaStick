@@ -1,0 +1,27 @@
+# ESP-IDF build output
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/*.bin
+firmware/partitions.bin
+firmware/bootloader.bin
+firmware/flasher_args.json
+
+# Release artifacts
+launcher/dist/
+dist/
+*.elf
+*.map
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

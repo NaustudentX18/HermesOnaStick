@@ -1,0 +1,3 @@
+[submodule "firmware/hermes-gadget-sdk"]
+	path = firmware/hermes-gadget-sdk
+	url = https://github.com/Adolanium/hermes-gadget-sdk.git

@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # Placeholder until M1 lands the SDK submodule and the board port exists (M2).
+  # Real gates: ESP-IDF build of m5stick-s3, size check (tools/check_size.py),
+  # simulator smoke test, and a launcher-variant build in M3.
+  plan-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify scaffold files present
+        run: |
+          test -f README.md
+          test -f LICENSE
+          test -f docs/PLAN.md
+          test -f docs/HARDWARE.md
+          test -f docs/LAUNCHER.md
+          test -f .gitmodules
+          echo "Scaffold OK (M0). Board port CI lands in M2."
